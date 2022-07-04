@@ -1,0 +1,56 @@
+pipeline
+{
+  environment
+   {
+    dockerimagename = "formycore/nodeapp_chk"
+    dockerImage = ""
+  }
+  agent any 
+  stages 
+  {
+    stage('Checkout Source')
+    {
+      steps
+      {
+        git 'https://github.com/formycore/the_tips_4u_docker'
+      }
+    }
+    stage ('Build Image')
+    {
+      steps
+      {
+        script
+        {
+          dockerImage = docker.build dockerimagename
+        }
+      }
+    }
+    stage ('Pushing Image')
+    {
+      environment
+      {
+        registryCredentials = 'docker_login'
+      }
+      steps
+      {
+        script
+        {
+          docker.withRegistry('https://registry.hub.docker.com', registryCredentials)
+          {
+            dockerImage.push("latest")
+          } 
+        }
+      }
+    }
+    stage ('Deploy App to Kubernetes')
+    {
+      steps
+      {
+        script
+        {
+          kubernetesDeploy(configs: "deploymentservice.yml", kubeconfigId: "kube_config")
+        }
+      }
+    }
+  }
+}
